@@ -1,0 +1,13 @@
+{
+  "name": "TWINKLE - ESP32-S3 N16R8",
+  "version": "1.0.0",
+  "builds": [{
+    "chipFamily": "ESP32-S3",
+    "serialType": "cdc",
+    "parts": [
+      { "path": "binary/bootloaders/esp32-s3/bootloader_s3_opi.bin", "offset": 0 },
+      { "path": "binary/partition/esp32-s3-16m.bin", "offset": 32768 },
+      { "path": "binary/firmware/esp32-s3-n16r8.bin", "offset": 65536 }
+    ]
+  }]
+}

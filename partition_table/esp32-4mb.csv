@@ -1,0 +1,9 @@
+# Partition table ESP32 flash 4MB.
+# Layout konsisten: app0/app1 masing-masing 1.5MB.
+# Sisa flash dialokasikan ke SPIFFS.
+# Name,   Type, SubType, Offset, Size, Flags
+nvs,      data, nvs,     0x9000,   0x5000,
+otadata,  data, ota,     0xE000,   0x2000,
+app0,     app,  ota_0,   0x10000,  0x180000,
+app1,     app,  ota_1,   0x190000, 0x180000,
+spiffs,   data, spiffs,  0x310000, 0xF0000,

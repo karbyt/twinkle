@@ -1,0 +1,13 @@
+{
+  "name": "TWINKLE - ESP32-S3 8MB tanpa PSRAM",
+  "version": "1.0.0",
+  "builds": [{
+    "chipFamily": "ESP32-S3",
+    "serialType": "cdc",
+    "parts": [
+      { "path": "binary/bootloaders/esp32-s3/bootloader_s3.bin", "offset": 0 },
+      { "path": "binary/partition/esp32-s3-8m.bin", "offset": 32768 },
+      { "path": "binary/firmware/esp32-s3-8m.bin", "offset": 65536 }
+    ]
+  }]
+}
