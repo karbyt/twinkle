@@ -3,7 +3,7 @@
     "version": "1.0.0",
     "build": 1,
     "mandatory": false,
-    "notes": "Rilis awal Twinkle.",
+    "notes": "fix: point update fallback to releases page",
     "downloads": {
       "androidArm64": "https://github.com/karbyt/twinkle/releases/download/app-v1.0.0/Twinkle-1.0.0-arm64-v8a.apk",
       "androidArm": "https://github.com/karbyt/twinkle/releases/download/app-v1.0.0/Twinkle-1.0.0-armeabi-v7a.apk",
