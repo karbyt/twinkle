@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Jadwal Sholat Kemenag → BIN</title>
+<style>
+:root{--bg:#f3f6f1;--panel:#fff;--ink:#14261c;--mute:#5b6e63;--line:#d3ddd5;--acc:#0f6b3f;--accInk:#fff;--err:#b3261e;--warn:#8a5a00;--code:#e9efe9}
+@media (prefers-color-scheme:dark){:root{--bg:#0d1a13;--panel:#14261c;--ink:#e6f0e8;--mute:#93a99b;--line:#264033;--acc:#3ddc84;--accInk:#06210f;--err:#ff8a80;--warn:#ffc266;--code:#0d1a13}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 "Segoe UI",system-ui,sans-serif;padding:24px 16px}
+main{max-width:640px;margin:0 auto}
+h1{font-size:1.5rem;margin:0 0 4px}
+p.sub{color:var(--mute);margin:0 0 20px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:18px}
+label{display:block;font-weight:600;margin:14px 0 4px}
+label:first-child{margin-top:0}
+select,input,button{font:inherit;width:100%;padding:10px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--ink)}
+select:disabled{opacity:.5}
+button{background:var(--acc);color:var(--accInk);border-color:var(--acc);font-weight:700;cursor:pointer;margin-top:18px}
+button:disabled{opacity:.5;cursor:not-allowed}
+:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+details{margin-top:14px;color:var(--mute)}
+summary{cursor:pointer}
+#log{margin-top:16px;font:13px/1.5 ui-monospace,Consolas,monospace;background:var(--code);border:1px solid var(--line);border-radius:8px;padding:10px;max-height:220px;overflow:auto;white-space:pre-wrap;min-height:44px}
+.err{color:var(--err)}.warn{color:var(--warn)}
+#result{margin-top:16px;display:none}
+#result a{display:block;text-align:center;text-decoration:none;background:var(--acc);color:var(--accInk);padding:12px;border-radius:8px;font-weight:700}
+#hex{font:12px/1.4 ui-monospace,Consolas,monospace;color:var(--mute);margin-top:10px;word-break:break-all}
+</style>
+</head>
+<body>
+<main>
+<h1>Jadwal sholat Kemenag ke file .bin</h1>
+<p class="sub">Pilih provinsi, kab/kota, dan tahun. Satu tahun penuh dikompres menjadi satu file.</p>
+<div class="panel">
+  <label for="prov">Provinsi</label>
+  <select id="prov" disabled><option>Memuat…</option></select>
+  <label for="kabko">Kab/Kota</label>
+  <select id="kabko" disabled><option>Pilih provinsi dulu</option></select>
+  <div class="row">
+    <div><label for="year">Tahun</label><select id="year"></select></div>
+    <div><label for="nib">Urutan nibble</label>
+      <select id="nib"><option value="hi">Nibble atas dulu</option><option value="lo">Nibble bawah dulu</option></select></div>
+  </div>
+  <details>
+    <summary>Pengaturan koneksi (jika terblokir CORS)</summary>
+    <label for="proxy">Awalan proxy CORS (opsional)</label>
+    <input id="proxy" placeholder="https://corsproxy.io/?url=" spellcheck="false">
+  </details>
+  <button id="go" disabled>Buat file .bin</button>
+  <div id="log" role="log" aria-live="polite"></div>
+  <div id="result"><a id="dl" href="#">Unduh</a><div id="hex"></div></div>
+</div>
+</main>
+<script>
+const BASE='https://bimasislam.kemenag.go.id/api/sihat/';
+const KEYS=['imsak','subuh','terbit','dhuha','dzuhur','ashar','maghrib','isya'];
+const $=id=>document.getElementById(id);
+const logEl=$('log');
+function log(m,c){const d=document.createElement('div');if(c)d.className=c;d.textContent=m;logEl.appendChild(d);logEl.scrollTop=logEl.scrollHeight}
+
+async function api(path){
+  const px=$('proxy').value.trim();
+  const url=BASE+path;
+  const r=await fetch(px?px+encodeURIComponent(url):url);
+  if(!r.ok)throw new Error('HTTP '+r.status);
+  const j=await r.json();
+  if(j.status!==undefined&&j.status!==1)throw new Error(j.message||'Respons gagal');
+  return j;
+}
+
+// Respons daftar bisa berbentuk array/objek; ambil pasangan {label, token}
+function parseList(j){
+  let d=j.data!==undefined?j.data:j;
+  const out=[];
+  if(Array.isArray(d)){
+    for(const it of d){
+      if(typeof it==='string'){out.push({label:it,token:it});continue}
+      const s=Object.entries(it).filter(([,v])=>typeof v==='string');
+      if(!s.length)continue;
+      const token=s.reduce((a,b)=>b[1].length>a[1].length?b:a)[1];
+      const pref=s.find(([k,v])=>/nama|name|label|prov|kabko|kota/i.test(k)&&v!==token)||s.find(([,v])=>v!==token);
+      out.push({label:pref?pref[1]:token,token});
+    }
+  }else if(d&&typeof d==='object'){
+    for(const [k,v] of Object.entries(d)){
+      if(typeof v==='string')out.push(v.length>k.length?{label:k,token:v}:{label:v,token:k});
+    }
+  }
+  return out.sort((a,b)=>a.label.localeCompare(b.label));
+}
+function fill(sel,items){
+  sel.innerHTML='';
+  for(const it of items){const o=document.createElement('option');o.value=it.token;o.textContent=it.label;sel.appendChild(o)}
+  sel.disabled=!items.length;
+}
+
+async function loadProv(){
+  $('prov').disabled=true;$('go').disabled=true;
+  try{
+    const j=await api('provinsi');
+    const l=parseList(j);
+    if(!l.length){log('Daftar provinsi kosong. Respons: '+JSON.stringify(j).slice(0,300),'err');return}
+    fill($('prov'),l);
+    await loadKabko();
+  }catch(e){
+    log('Gagal memuat provinsi: '+e.message+'. Jika karena CORS, isi awalan proxy di pengaturan koneksi lalu muat ulang pilihan provinsi.','err');
+    $('prov').innerHTML='<option>Gagal memuat</option>';
+  }
+}
+async function loadKabko(){
+  $('go').disabled=true;
+  $('kabko').disabled=true;$('kabko').innerHTML='<option>Memuat…</option>';
+  try{
+    const j=await api('kabko?prov='+encodeURIComponent($('prov').value));
+    const l=parseList(j);
+    if(!l.length){log('Daftar kab/kota kosong. Respons: '+JSON.stringify(j).slice(0,300),'err');return}
+    fill($('kabko'),l);
+    $('go').disabled=false;
+  }catch(e){log('Gagal memuat kab/kota: '+e.message,'err')}
+}
+$('prov').addEventListener('change',loadKabko);
+$('proxy').addEventListener('change',()=>{if($('prov').options.length<2)loadProv()});
+
+(function(){
+  const y=new Date().getFullYear();
+  for(let i=y-1;i<=y+4;i++){const o=document.createElement('option');o.value=o.textContent=i;if(i===2026||(y>2026&&i===y))o.selected=true;$('year').appendChild(o)}
+})();
+
+const toMin=s=>{const m=/^(\d{1,2}):(\d{2})/.exec(s||'');if(!m)throw new Error('Format waktu tidak valid: '+s);return +m[1]*60+ +m[2]};
+const pad=n=>String(n).padStart(2,'0');
+
+async function build(){
+  const year=+$('year').value, prov=$('prov').value, kabko=$('kabko').value;
+  const hiFirst=$('nib').value==='hi';
+  $('go').disabled=true;$('result').style.display='none';logEl.textContent='';
+  try{
+    // Ambil 12 bulan
+    const days={};
+    let meta=null;
+    for(let m=1;m<=12;m++){
+      log(`Mengambil bulan ${m}/${year}…`);
+      const j=await api(`jadwal?prov=${encodeURIComponent(prov)}&kabko=${encodeURIComponent(kabko)}&thn=${year}&bln=${m}`);
+      if(!meta)meta=j;
+      Object.assign(days,j.data||{});
+    }
+    // Susun per hari, 1 Jan - 31 Des
+    const rows=[];
+    const d=new Date(Date.UTC(year,0,1));
+    while(d.getUTCFullYear()===year){
+      const key=`${year}-${pad(d.getUTCMonth()+1)}-${pad(d.getUTCDate())}`;
+      const e=days[key];
+      if(!e)throw new Error('Data tanggal '+key+' tidak ada di respons.');
+      rows.push(KEYS.map(k=>toMin(e[k])));
+      d.setUTCDate(d.getUTCDate()+1);
+    }
+    // Encode: hari 1 = 8 x uint16 LE; hari berikutnya = 8 x delta signed 4-bit
+    const nib=[];let bad=0;
+    for(let i=1;i<rows.length;i++)for(let k=0;k<8;k++){
+      const dt=rows[i][k]-rows[i-1][k];
+      if(dt<-8||dt>7){bad++;log(`Delta di luar -8..7: hari ke-${i+1}, ${KEYS[k]} (${dt} menit)`,'warn')}
+      nib.push(Math.max(-8,Math.min(7,dt))&0xF);
+    }
+    const out=new Uint8Array(16+Math.ceil(nib.length/2));
+    const dv=new DataView(out.buffer);
+    rows[0].forEach((v,k)=>dv.setUint16(k*2,v,true));
+    for(let i=0;i<nib.length;i+=2){
+      const a=nib[i],b=i+1<nib.length?nib[i+1]:0;
+      out[16+(i>>1)]=hiFirst?(a<<4|b):(b<<4|a);
+    }
+    const blob=new Blob([out],{type:'application/octet-stream'});
+    const a=$('dl');
+    if(a.dataset.u)URL.revokeObjectURL(a.dataset.u);
+    a.dataset.u=a.href=URL.createObjectURL(blob);
+    a.download=year+'.bin';
+    a.textContent=`Unduh ${year}.bin (${out.length} byte)`;
+    $('hex').textContent='Awal: '+Array.from(out.slice(0,32),b=>pad(b.toString(16))).join(' ');
+    $('result').style.display='block';
+    log(`Selesai: ${meta.kabko||''}, ${meta.prov||''} · ${rows.length} hari · ${out.length} byte`+(bad?` · ${bad} delta dipotong`:''));
+  }catch(e){
+    log('Gagal: '+e.message,'err');
+  }finally{$('go').disabled=false}
+}
+$('go').addEventListener('click',build);
+loadProv();
+</script>
+</body>
+</html>
