@@ -1,6 +1,6 @@
 {
   "name": "TWINKLE - ESP32-S3 N16R8",
-  "version": "1.0.1",
+  "version": "1.0.0",
   "builds": [
     {
       "chipFamily": "ESP32-S3",

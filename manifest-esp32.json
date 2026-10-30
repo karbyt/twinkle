@@ -1,6 +1,6 @@
 {
   "name": "TWINKLE - ESP32 4MB",
-  "version": "1.0.1",
+  "version": "1.0.0",
   "builds": [
     {
       "chipFamily": "ESP32",
