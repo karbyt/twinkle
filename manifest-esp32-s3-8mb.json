@@ -1,6 +1,6 @@
 {
   "name": "TWINKLE - ESP32-S3 8MB tanpa PSRAM",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "builds": [
     {
       "chipFamily": "ESP32-S3",
