@@ -12,7 +12,7 @@
     }
   },
   "firmware": {
-    "version": "v1.2.0",
-    "notes": "add khotbah scene & petugas sholat"
+    "version": "v1.3.0",
+    "notes": "add QR scene"
   }
 }
