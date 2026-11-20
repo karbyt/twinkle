@@ -13,7 +13,7 @@
     }
   },
   "firmware": {
-    "version": "v1.4.0",
-    "notes": "add event bus ConfigChanged & fix related files\n\nmake 1 resource config modifiable via dedicated domain or file manager"
+    "version": "v1.5.0",
+    "notes": "add font & add notify scene"
   }
 }
